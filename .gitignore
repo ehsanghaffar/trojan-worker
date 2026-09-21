@@ -166,3 +166,5 @@ dist
 !.env.example
 .wrangler/
 wrangler.jsonc
+
+.DS_Store
