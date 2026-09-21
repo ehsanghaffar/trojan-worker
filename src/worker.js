@@ -1,12 +1,15 @@
 // src/worker.js
 
 const subLinks = [
-  "https://raw.githubusercontent.com/iboxz/free-v2ray-collector/main/main/trojan.txt",
-  "https://raw.githubusercontent.com/10ium/V2Hub3/main/Split/Normal/trojan",
-  "https://raw.githubusercontent.com/mohamadfg-dev/telegram-v2ray-configs-collector/refs/heads/main/category/Iran.txt",
-  "https://raw.githubusercontent.com/10ium/multi-proxy-config-fetcher/refs/heads/main/configs/proxy_configs.txt",
-  "https://raw.githubusercontent.com/Epodonios/v2ray-configs/refs/heads/main/Splitted-By-Protocol/trojan.txt",
-  "https://raw.githubusercontent.com/Surfboardv2ray/TGParse/refs/heads/main/configtg.txt",
+	'https://raw.githubusercontent.com/iboxz/free-v2ray-collector/main/main/trojan.txt',
+	'https://raw.githubusercontent.com/10ium/V2Hub3/main/Split/Normal/trojan',
+	'https://raw.githubusercontent.com/mohamadfg-dev/telegram-v2ray-configs-collector/refs/heads/main/category/Iran.txt',
+	'https://raw.githubusercontent.com/10ium/multi-proxy-config-fetcher/refs/heads/main/configs/proxy_configs.txt',
+	'https://raw.githubusercontent.com/Epodonios/v2ray-configs/refs/heads/main/Splitted-By-Protocol/trojan.txt',
+	'https://raw.githubusercontent.com/Surfboardv2ray/TGParse/refs/heads/main/configtg.txt',
+	'https://raw.githubusercontent.com/plsn1337/white-vless/refs/heads/main/filtered_vless_keys.txt',
+	'https://raw.githubusercontent.com/10ium/multi-proxy-config-fetcher/refs/heads/main/configs/proxy_configs.txt',
+	'https://raw.githubusercontent.com/MahanKenway/Freedom-V2Ray/main/configs/mix_sub.txt',
 ];
 
 const SOURCE_TIMEOUT = 8000;
@@ -17,19 +20,19 @@ const CHECK_CONCURRENCY = 24;
 
 const MAX_CHECK_CANDIDATES = 40;
 
-const HOME_HOSTNAME = "node-garden.eindev.ir";
+const HOME_HOSTNAME = 'node-garden.eindev.ir';
 const HOME_ORIGIN = `https://${HOME_HOSTNAME}`;
 
-const SUBSCRIPTION_HOSTNAME = "trojan.eghafari-5000.workers.dev";
+const SUBSCRIPTION_HOSTNAME = 'trojan.eghafari-5000.workers.dev';
 const SUBSCRIPTION_ORIGIN = `https://${SUBSCRIPTION_HOSTNAME}`;
 
-const CLEAN_IP_URL = "https://raw.githubusercontent.com/ircfspace/cf2dns/refs/heads/master/list/ipv4.json";
+const CLEAN_IP_URL = 'https://raw.githubusercontent.com/ircfspace/cf2dns/refs/heads/master/list/ipv4.json';
 
 const CLEAN_IP_TIMEOUT = 5000;
 
 let cleanIpCache = {
-  ips: [],
-  expiresAt: 0,
+	ips: [],
+	expiresAt: 0,
 };
 
 /* -------------------------------------------------------------------------- */
@@ -37,125 +40,125 @@ let cleanIpCache = {
 /* -------------------------------------------------------------------------- */
 
 export default {
-  async fetch(request) {
-    const url = new URL(request.url);
+	async fetch(request) {
+		const url = new URL(request.url);
 
-    if (url.pathname === "/") {
-      if (url.hostname !== HOME_HOSTNAME) {
-        return Response.redirect(`${HOME_ORIGIN}/`, 302);
-      }
+		if (url.pathname === '/') {
+			if (url.hostname !== HOME_HOSTNAME) {
+				return Response.redirect(`${HOME_ORIGIN}/`, 302);
+			}
 
-      return new Response(renderHomePage(), {
-        headers: {
-          "content-type": "text/html; charset=UTF-8",
-          "cache-control": "no-store",
-        },
-      });
-    }
+			return new Response(renderHomePage(), {
+				headers: {
+					'content-type': 'text/html; charset=UTF-8',
+					'cache-control': 'no-store',
+				},
+			});
+		}
 
-    if (url.pathname === "/fa") {
-      if (url.hostname !== HOME_HOSTNAME) {
-        return Response.redirect(`${HOME_ORIGIN}/fa`, 302);
-      }
+		if (url.pathname === '/fa') {
+			if (url.hostname !== HOME_HOSTNAME) {
+				return Response.redirect(`${HOME_ORIGIN}/fa`, 302);
+			}
 
-      return new Response(renderHomePageFa(), {
-        headers: {
-          "content-type": "text/html; charset=UTF-8",
-          "cache-control": "no-store",
-        },
-      });
-    }
+			return new Response(renderHomePageFa(), {
+				headers: {
+					'content-type': 'text/html; charset=UTF-8',
+					'cache-control': 'no-store',
+				},
+			});
+		}
 
-    // Source status API
-    if (url.pathname === "/api/sub-links") {
-      return handleSourceStatus();
-    }
+		// Source status API
+		if (url.pathname === '/api/sub-links') {
+			return handleSourceStatus();
+		}
 
-    // Subscription
-    if (url.pathname === "/sub" || url.pathname.startsWith("/sub/")) {
-      return handleSubscription(url, request);
-    }
+		// Subscription
+		if (url.pathname === '/sub' || url.pathname.startsWith('/sub/')) {
+			return handleSubscription(url, request);
+		}
 
-    // Original proxy behavior
-    const parts = url.pathname.replace(/^\/+/, "").split("/");
-    const address = parts.shift();
+		// Original proxy behavior
+		const parts = url.pathname.replace(/^\/+/, '').split('/');
+		const address = parts.shift();
 
-    if (!address) {
-      return new Response("Not Found", { status: 404 });
-    }
+		if (!address) {
+			return new Response('Not Found', { status: 404 });
+		}
 
-    url.hostname = address;
-    url.protocol = "https:";
-    url.pathname = "/" + parts.join("/");
+		url.hostname = address;
+		url.protocol = 'https:';
+		url.pathname = '/' + parts.join('/');
 
-    return fetch(new Request(url, request));
-  },
+		return fetch(new Request(url, request));
+	},
 };
 
 function randomItem(array) {
-  return array[Math.floor(Math.random() * array.length)];
+	return array[Math.floor(Math.random() * array.length)];
 }
 
 async function getRandomCleanIp() {
-  const now = Date.now();
+	const now = Date.now();
 
-  // Reuse the IP list for 5 minutes,
-  // but choose a different random IP on every subscription request.
-  if (cleanIpCache.expiresAt > now && cleanIpCache.ips.length > 0) {
-    return randomItem(cleanIpCache.ips);
-  }
+	// Reuse the IP list for 5 minutes,
+	// but choose a different random IP on every subscription request.
+	if (cleanIpCache.expiresAt > now && cleanIpCache.ips.length > 0) {
+		return randomItem(cleanIpCache.ips);
+	}
 
-  try {
-    const controller = new AbortController();
+	try {
+		const controller = new AbortController();
 
-    const timeout = setTimeout(() => {
-      controller.abort();
-    }, CLEAN_IP_TIMEOUT);
+		const timeout = setTimeout(() => {
+			controller.abort();
+		}, CLEAN_IP_TIMEOUT);
 
-    try {
-      const response = await fetch(CLEAN_IP_URL, {
-        headers: {
-          "cache-control": "no-cache",
-        },
-        signal: controller.signal,
-      });
+		try {
+			const response = await fetch(CLEAN_IP_URL, {
+				headers: {
+					'cache-control': 'no-cache',
+				},
+				signal: controller.signal,
+			});
 
-      if (!response.ok) {
-        return null;
-      }
+			if (!response.ok) {
+				return null;
+			}
 
-      const data = await response.json();
+			const data = await response.json();
 
-      const ips = [
-        ...new Set(
-          (Array.isArray(data) ? data : [])
-            .map((item) => {
-              if (typeof item === "string") {
-                return item;
-              }
+			const ips = [
+				...new Set(
+					(Array.isArray(data) ? data : [])
+						.map((item) => {
+							if (typeof item === 'string') {
+								return item;
+							}
 
-              return item?.ip;
-            })
-            .filter(isIp),
-        ),
-      ];
+							return item?.ip;
+						})
+						.filter(isIp),
+				),
+			];
 
-      if (ips.length === 0) {
-        return null;
-      }
+			if (ips.length === 0) {
+				return null;
+			}
 
-      cleanIpCache = {
-        ips,
-        expiresAt: now + 5 * 60 * 1000,
-      };
+			cleanIpCache = {
+				ips,
+				expiresAt: now + 5 * 60 * 1000,
+			};
 
-      return randomItem(ips);
-    } finally {
-      clearTimeout(timeout);
-    }
-  } catch {
-    return null;
-  }
+			return randomItem(ips);
+		} finally {
+			clearTimeout(timeout);
+		}
+	} catch {
+		return null;
+	}
 }
 
 /* -------------------------------------------------------------------------- */
@@ -163,283 +166,283 @@ async function getRandomCleanIp() {
 /* -------------------------------------------------------------------------- */
 
 function wantsHtmlLoadingPage(request, url) {
-  // Explicit opt-outs: proxy clients or anyone who wants the raw list.
-  if (url.searchParams.get("raw") === "1") return false;
-  if (url.searchParams.get("format") === "raw") return false;
+	// Explicit opt-outs: proxy clients or anyone who wants the raw list.
+	if (url.searchParams.get('raw') === '1') return false;
+	if (url.searchParams.get('format') === 'raw') return false;
 
-  const accept = request.headers.get("accept") || "";
-  return accept.includes("text/html");
+	const accept = request.headers.get('accept') || '';
+	return accept.includes('text/html');
 }
 
 function buildRawSubUrl(url) {
-  const rawUrl = new URL(url.toString());
-  rawUrl.searchParams.set("raw", "1");
-  return rawUrl.pathname + rawUrl.search;
+	const rawUrl = new URL(url.toString());
+	rawUrl.searchParams.set('raw', '1');
+	return rawUrl.pathname + rawUrl.search;
 }
 
 function buildCanonicalSubUrl(url) {
-  const canonical = new URL(url.pathname + url.search, SUBSCRIPTION_ORIGIN);
-  canonical.searchParams.delete("raw");
-  return canonical.toString();
+	const canonical = new URL(url.pathname + url.search, SUBSCRIPTION_ORIGIN);
+	canonical.searchParams.delete('raw');
+	return canonical.toString();
 }
 
 async function handleSubscription(url, request) {
-  if (request && wantsHtmlLoadingPage(request, url)) {
-    return new Response(renderSubLoadingPage(buildRawSubUrl(url), buildCanonicalSubUrl(url)), {
-      headers: {
-        "content-type": "text/html; charset=UTF-8",
-        "cache-control": "no-store",
-      },
-    });
-  }
+	if (request && wantsHtmlLoadingPage(request, url)) {
+		return new Response(renderSubLoadingPage(buildRawSubUrl(url), buildCanonicalSubUrl(url)), {
+			headers: {
+				'content-type': 'text/html; charset=UTF-8',
+				'cache-control': 'no-store',
+			},
+		});
+	}
 
-  const pathParts = url.pathname.split("/").filter(Boolean);
+	const pathParts = url.pathname.split('/').filter(Boolean);
 
-  const realAddress = pathParts[1] || "";
+	const realAddress = pathParts[1] || '';
 
-  // Configs' host/sni always point at the dedicated subscription domain,
-  // not whichever domain this request happened to arrive on.
-  const workerHostname = SUBSCRIPTION_HOSTNAME;
+	// Configs' host/sni always point at the dedicated subscription domain,
+	// not whichever domain this request happened to arrive on.
+	const workerHostname = SUBSCRIPTION_HOSTNAME;
 
-  // Use a random Cloudflare clean IP for the client-facing address.
-  const cleanIp = await getRandomCleanIp();
+	// Use a random Cloudflare clean IP for the client-facing address.
+	const cleanIp = await getRandomCleanIp();
 
-  const outputAddress = cleanIp || realAddress || SUBSCRIPTION_HOSTNAME;
+	const outputAddress = cleanIp || realAddress || SUBSCRIPTION_HOSTNAME;
 
-  const checkEnabled = url.searchParams.get("check") !== "0";
-  const n = parsePositiveInt(url.searchParams.get("n"));
+	const checkEnabled = url.searchParams.get('check') !== '0';
+	const n = parsePositiveInt(url.searchParams.get('n'));
 
-  const candidates = [];
+	const candidates = [];
 
-  const seen = {
-    vmess: new Set(),
-    vless: new Set(),
-    trojan: new Set(),
-  };
+	const seen = {
+		vmess: new Set(),
+		vless: new Set(),
+		trojan: new Set(),
+	};
 
-  for (let sourceIndex = 0; sourceIndex < subLinks.length; sourceIndex++) {
-    const source = subLinks[sourceIndex];
+	for (let sourceIndex = 0; sourceIndex < subLinks.length; sourceIndex++) {
+		const source = subLinks[sourceIndex];
 
-    try {
-      const response = await fetchTimeout(
-        source,
-        {
-          headers: {
-            "cache-control": "no-cache",
-          },
-        },
-        SOURCE_TIMEOUT,
-      );
+		try {
+			const response = await fetchTimeout(
+				source,
+				{
+					headers: {
+						'cache-control': 'no-cache',
+					},
+				},
+				SOURCE_TIMEOUT,
+			);
 
-      if (!response.ok) continue;
+			if (!response.ok) continue;
 
-      let text = await response.text();
-      text = decodeBase64IfNeeded(text);
+			let text = await response.text();
+			text = decodeBase64IfNeeded(text);
 
-      const lines = text.split(/\r?\n/);
+			const lines = text.split(/\r?\n/);
 
-      for (const raw of lines) {
-        const line = raw.trim();
+			for (const raw of lines) {
+				const line = raw.trim();
 
-        if (!line) continue;
+				if (!line) continue;
 
-        try {
-          /* ------------------------------- VMESS ------------------------------- */
+				try {
+					/* ------------------------------- VMESS ------------------------------- */
 
-          if (line.startsWith("vmess://")) {
-            const parsed = parseVmess(line);
+					if (line.startsWith('vmess://')) {
+						const parsed = parseVmess(line);
 
-            if (!parsed) continue;
+						if (!parsed) continue;
 
-            if (!parsed.sni || isIp(parsed.sni) || parsed.net !== "ws" || parsed.port !== 443) {
-              continue;
-            }
+						if (!parsed.sni || isIp(parsed.sni) || parsed.net !== 'ws' || parsed.port !== 443) {
+							continue;
+						}
 
-            if (shouldSkipHost(parsed.sni)) {
-              continue;
-            }
+						if (shouldSkipHost(parsed.sni)) {
+							continue;
+						}
 
-            const upstreamPath = normalizePath(parsed.path);
-            const dedupeKey = `${parsed.sni}|${upstreamPath}`;
+						const upstreamPath = normalizePath(parsed.path);
+						const dedupeKey = `${parsed.sni}|${upstreamPath}`;
 
-            if (seen.vmess.has(dedupeKey)) {
-              continue;
-            }
+						if (seen.vmess.has(dedupeKey)) {
+							continue;
+						}
 
-            seen.vmess.add(dedupeKey);
+						seen.vmess.add(dedupeKey);
 
-            const workerPath = `/${parsed.sni}${upstreamPath}`;
+						const workerPath = `/${parsed.sni}${upstreamPath}`;
 
-            const config = {
-              v: "2",
-              ps: makeNodeName("vmess", parsed.sni, upstreamPath, sourceIndex),
-              add: outputAddress,
-              port: 443,
-              id: parsed.id,
-              net: "ws",
-              type: "ws",
-              host: workerHostname,
-              path: workerPath,
-              tls: parsed.tls || "tls",
-              sni: workerHostname,
-              aid: "0",
-              scy: "auto",
-              fp: "chrome",
-              alpn: "http/1.1",
-            };
+						const config = {
+							v: '2',
+							ps: makeNodeName('vmess', parsed.sni, upstreamPath, sourceIndex),
+							add: outputAddress,
+							port: 443,
+							id: parsed.id,
+							net: 'ws',
+							type: 'ws',
+							host: workerHostname,
+							path: workerPath,
+							tls: parsed.tls || 'tls',
+							sni: workerHostname,
+							aid: '0',
+							scy: 'auto',
+							fp: 'chrome',
+							alpn: 'http/1.1',
+						};
 
-            candidates.push({
-              protocol: "vmess",
-              sni: parsed.sni,
-              path: upstreamPath,
-              sourceIndex,
-              value: "vmess://" + btoa(JSON.stringify(config)),
-            });
+						candidates.push({
+							protocol: 'vmess',
+							sni: parsed.sni,
+							path: upstreamPath,
+							sourceIndex,
+							value: 'vmess://' + btoa(JSON.stringify(config)),
+						});
 
-            continue;
-          }
+						continue;
+					}
 
-          /* ------------------------------- VLESS ------------------------------- */
+					/* ------------------------------- VLESS ------------------------------- */
 
-          if (line.startsWith("vless://")) {
-            const parsed = parseVless(line);
+					if (line.startsWith('vless://')) {
+						const parsed = parseVless(line);
 
-            if (!parsed) continue;
+						if (!parsed) continue;
 
-            if (!parsed.sni || isIp(parsed.sni) || parsed.security !== "tls" || parsed.port !== 443 || parsed.type !== "ws") {
-              continue;
-            }
+						if (!parsed.sni || isIp(parsed.sni) || parsed.security !== 'tls' || parsed.port !== 443 || parsed.type !== 'ws') {
+							continue;
+						}
 
-            if (shouldSkipHost(parsed.sni)) {
-              continue;
-            }
+						if (shouldSkipHost(parsed.sni)) {
+							continue;
+						}
 
-            const upstreamPath = normalizePath(parsed.path);
-            const dedupeKey = `${parsed.sni}|${upstreamPath}`;
+						const upstreamPath = normalizePath(parsed.path);
+						const dedupeKey = `${parsed.sni}|${upstreamPath}`;
 
-            if (seen.vless.has(dedupeKey)) {
-              continue;
-            }
+						if (seen.vless.has(dedupeKey)) {
+							continue;
+						}
 
-            seen.vless.add(dedupeKey);
+						seen.vless.add(dedupeKey);
 
-            const workerPath = `/${parsed.sni}${upstreamPath}`;
-            const name = makeNodeName("vless", parsed.sni, upstreamPath, sourceIndex);
+						const workerPath = `/${parsed.sni}${upstreamPath}`;
+						const name = makeNodeName('vless', parsed.sni, upstreamPath, sourceIndex);
 
-            const config =
-              `vless://${encodeURIComponent(parsed.uuid)}` +
-              `@${outputAddress}:443` +
-              `?encryption=none` +
-              `&security=tls` +
-              `&sni=${encodeURIComponent(workerHostname)}` +
-              `&alpn=http%2F1.1` +
-              `&fp=chrome` +
-              `&allowInsecure=1` +
-              `&type=ws` +
-              `&host=${encodeURIComponent(workerHostname)}` +
-              `&path=${encodeURIComponent(workerPath)}` +
-              `#${encodeURIComponent(name)}`;
+						const config =
+							`vless://${encodeURIComponent(parsed.uuid)}` +
+							`@${outputAddress}:443` +
+							`?encryption=none` +
+							`&security=tls` +
+							`&sni=${encodeURIComponent(workerHostname)}` +
+							`&alpn=http%2F1.1` +
+							`&fp=chrome` +
+							`&allowInsecure=1` +
+							`&type=ws` +
+							`&host=${encodeURIComponent(workerHostname)}` +
+							`&path=${encodeURIComponent(workerPath)}` +
+							`#${encodeURIComponent(name)}`;
 
-            candidates.push({
-              protocol: "vless",
-              sni: parsed.sni,
-              path: upstreamPath,
-              sourceIndex,
-              value: config,
-            });
+						candidates.push({
+							protocol: 'vless',
+							sni: parsed.sni,
+							path: upstreamPath,
+							sourceIndex,
+							value: config,
+						});
 
-            continue;
-          }
+						continue;
+					}
 
-          /* ------------------------------- TROJAN ------------------------------ */
+					/* ------------------------------- TROJAN ------------------------------ */
 
-          if (line.startsWith("trojan://")) {
-            const parsed = parseTrojan(line);
+					if (line.startsWith('trojan://')) {
+						const parsed = parseTrojan(line);
 
-            if (!parsed) continue;
+						if (!parsed) continue;
 
-            if (!parsed.sni || isIp(parsed.sni) || parsed.security !== "tls" || parsed.port !== 443 || parsed.type !== "ws") {
-              continue;
-            }
+						if (!parsed.sni || isIp(parsed.sni) || parsed.security !== 'tls' || parsed.port !== 443 || parsed.type !== 'ws') {
+							continue;
+						}
 
-            if (shouldSkipHost(parsed.sni)) {
-              continue;
-            }
+						if (shouldSkipHost(parsed.sni)) {
+							continue;
+						}
 
-            const upstreamPath = normalizePath(parsed.path);
-            const dedupeKey = `${parsed.sni}|${upstreamPath}`;
+						const upstreamPath = normalizePath(parsed.path);
+						const dedupeKey = `${parsed.sni}|${upstreamPath}`;
 
-            if (seen.trojan.has(dedupeKey)) {
-              continue;
-            }
+						if (seen.trojan.has(dedupeKey)) {
+							continue;
+						}
 
-            seen.trojan.add(dedupeKey);
+						seen.trojan.add(dedupeKey);
 
-            const workerPath = `/${parsed.sni}${upstreamPath}`;
-            const name = makeNodeName("trojan", parsed.sni, upstreamPath, sourceIndex);
+						const workerPath = `/${parsed.sni}${upstreamPath}`;
+						const name = makeNodeName('trojan', parsed.sni, upstreamPath, sourceIndex);
 
-            const config =
-              `trojan://${encodeURIComponent(parsed.password)}` +
-              `@${outputAddress}:443` +
-              `?security=tls` +
-              `&sni=${encodeURIComponent(workerHostname)}` +
-              `&alpn=http%2F1.1` +
-              `&fp=chrome` +
-              `&allowInsecure=1` +
-              `&type=ws` +
-              `&host=${encodeURIComponent(workerHostname)}` +
-              `&path=${encodeURIComponent(workerPath)}` +
-              `#${encodeURIComponent(name)}`;
+						const config =
+							`trojan://${encodeURIComponent(parsed.password)}` +
+							`@${outputAddress}:443` +
+							`?security=tls` +
+							`&sni=${encodeURIComponent(workerHostname)}` +
+							`&alpn=http%2F1.1` +
+							`&fp=chrome` +
+							`&allowInsecure=1` +
+							`&type=ws` +
+							`&host=${encodeURIComponent(workerHostname)}` +
+							`&path=${encodeURIComponent(workerPath)}` +
+							`#${encodeURIComponent(name)}`;
 
-            candidates.push({
-              protocol: "trojan",
-              sni: parsed.sni,
-              path: upstreamPath,
-              sourceIndex,
-              value: config,
-            });
-          }
-        } catch {
-          // Ignore malformed individual configs.
-        }
-      }
-    } catch {
-      // Ignore failed subscription sources.
-    }
-  }
+						candidates.push({
+							protocol: 'trojan',
+							sni: parsed.sni,
+							path: upstreamPath,
+							sourceIndex,
+							value: config,
+						});
+					}
+				} catch {
+					// Ignore malformed individual configs.
+				}
+			}
+		} catch {
+			// Ignore failed subscription sources.
+		}
+	}
 
-  let working = candidates;
-  let checkedCount = 0;
-  let skippedForBudget = 0;
+	let working = candidates;
+	let checkedCount = 0;
+	let skippedForBudget = 0;
 
-  if (checkEnabled && candidates.length > 0) {
-    const toCheck = selectCandidatesForCheck(candidates, MAX_CHECK_CANDIDATES);
+	if (checkEnabled && candidates.length > 0) {
+		const toCheck = selectCandidatesForCheck(candidates, MAX_CHECK_CANDIDATES);
 
-    checkedCount = toCheck.length;
-    skippedForBudget = candidates.length - toCheck.length;
+		checkedCount = toCheck.length;
+		skippedForBudget = candidates.length - toCheck.length;
 
-    working = await filterWorking(toCheck);
-  }
+		working = await filterWorking(toCheck);
+	}
 
-  let result = working.map((item) => item.value);
+	let result = working.map((item) => item.value);
 
-  // ?n=10
-  if (n) {
-    result = randomItems(result, Math.min(n, result.length));
-  }
+	// ?n=10
+	if (n) {
+		result = randomItems(result, Math.min(n, result.length));
+	}
 
-  const body = result.length ? result.join("\n") + "\n" : "";
+	const body = result.length ? result.join('\n') + '\n' : '';
 
-  return new Response(body, {
-    headers: {
-      "content-type": "text/plain; charset=UTF-8",
-      "cache-control": checkEnabled ? "no-store" : "public, max-age=60",
-      "x-total-configs": String(candidates.length),
-      "x-checked-configs": String(checkedCount),
-      "x-skipped-for-subrequest-budget": String(skippedForBudget),
-      "x-working-configs": String(result.length),
-    },
-  });
+	return new Response(body, {
+		headers: {
+			'content-type': 'text/plain; charset=UTF-8',
+			'cache-control': checkEnabled ? 'no-store' : 'public, max-age=60',
+			'x-total-configs': String(candidates.length),
+			'x-checked-configs': String(checkedCount),
+			'x-skipped-for-subrequest-budget': String(skippedForBudget),
+			'x-working-configs': String(result.length),
+		},
+	});
 }
 
 /* -------------------------------------------------------------------------- */
@@ -454,115 +457,115 @@ async function handleSubscription(url, request) {
  * source gets a shot at contributing working nodes.
  */
 function selectCandidatesForCheck(candidates, max) {
-  if (candidates.length <= max) {
-    return candidates;
-  }
+	if (candidates.length <= max) {
+		return candidates;
+	}
 
-  const groups = new Map();
+	const groups = new Map();
 
-  for (const candidate of candidates) {
-    const list = groups.get(candidate.sourceIndex) || [];
-    list.push(candidate);
-    groups.set(candidate.sourceIndex, list);
-  }
+	for (const candidate of candidates) {
+		const list = groups.get(candidate.sourceIndex) || [];
+		list.push(candidate);
+		groups.set(candidate.sourceIndex, list);
+	}
 
-  const groupArrays = [...groups.values()];
-  const selected = [];
+	const groupArrays = [...groups.values()];
+	const selected = [];
 
-  let index = 0;
+	let index = 0;
 
-  while (selected.length < max) {
-    let addedAny = false;
+	while (selected.length < max) {
+		let addedAny = false;
 
-    for (const group of groupArrays) {
-      if (index < group.length) {
-        selected.push(group[index]);
-        addedAny = true;
+		for (const group of groupArrays) {
+			if (index < group.length) {
+				selected.push(group[index]);
+				addedAny = true;
 
-        if (selected.length >= max) {
-          break;
-        }
-      }
-    }
+				if (selected.length >= max) {
+					break;
+				}
+			}
+		}
 
-    if (!addedAny) {
-      break;
-    }
+		if (!addedAny) {
+			break;
+		}
 
-    index++;
-  }
+		index++;
+	}
 
-  return selected;
+	return selected;
 }
 
 async function filterWorking(candidates) {
-  const result = new Array(candidates.length).fill(false);
+	const result = new Array(candidates.length).fill(false);
 
-  let cursor = 0;
+	let cursor = 0;
 
-  async function runner() {
-    while (true) {
-      const index = cursor++;
+	async function runner() {
+		while (true) {
+			const index = cursor++;
 
-      if (index >= candidates.length) {
-        return;
-      }
+			if (index >= candidates.length) {
+				return;
+			}
 
-      result[index] = await checkConfig(candidates[index]);
-    }
-  }
+			result[index] = await checkConfig(candidates[index]);
+		}
+	}
 
-  const count = Math.min(CHECK_CONCURRENCY, candidates.length);
+	const count = Math.min(CHECK_CONCURRENCY, candidates.length);
 
-  await Promise.all(Array.from({ length: count }, () => runner()));
+	await Promise.all(Array.from({ length: count }, () => runner()));
 
-  return candidates.filter((_, index) => result[index]);
+	return candidates.filter((_, index) => result[index]);
 }
 
 async function checkConfig(candidate) {
-  if (!candidate?.sni) {
-    return false;
-  }
+	if (!candidate?.sni) {
+		return false;
+	}
 
-  const target = `https://${candidate.sni}` + normalizePath(candidate.path);
+	const target = `https://${candidate.sni}` + normalizePath(candidate.path);
 
-  try {
-    /*
-     * Cloudflare Worker outbound WebSocket handshake.
-     *
-     * This confirms:
-     *   DNS works
-     *   TLS works
-     *   remote server accepts WebSocket upgrade
-     *
-     * It does NOT authenticate VLESS/Trojan credentials.
-     */
-    const response = await fetchTimeout(
-      target,
-      {
-        headers: {
-          Upgrade: "websocket",
-          Connection: "Upgrade",
-        },
-      },
-      CONFIG_TIMEOUT,
-    );
+	try {
+		/*
+		 * Cloudflare Worker outbound WebSocket handshake.
+		 *
+		 * This confirms:
+		 *   DNS works
+		 *   TLS works
+		 *   remote server accepts WebSocket upgrade
+		 *
+		 * It does NOT authenticate VLESS/Trojan credentials.
+		 */
+		const response = await fetchTimeout(
+			target,
+			{
+				headers: {
+					Upgrade: 'websocket',
+					Connection: 'Upgrade',
+				},
+			},
+			CONFIG_TIMEOUT,
+		);
 
-    if (response.status !== 101 || !response.webSocket) {
-      return false;
-    }
+		if (response.status !== 101 || !response.webSocket) {
+			return false;
+		}
 
-    try {
-      response.webSocket.accept();
-      response.webSocket.close(1000, "health-check");
-    } catch {
-      // Handshake was already successful.
-    }
+		try {
+			response.webSocket.accept();
+			response.webSocket.close(1000, 'health-check');
+		} catch {
+			// Handshake was already successful.
+		}
 
-    return true;
-  } catch {
-    return false;
-  }
+		return true;
+	} catch {
+		return false;
+	}
 }
 
 /* -------------------------------------------------------------------------- */
@@ -570,145 +573,145 @@ async function checkConfig(candidate) {
 /* -------------------------------------------------------------------------- */
 
 async function handleSourceStatus() {
-  const results = await Promise.all(subLinks.map(checkSubLink));
+	const results = await Promise.all(subLinks.map(checkSubLink));
 
-  return jsonResponse({
-    checkedAt: new Date().toISOString(),
-    results,
-  });
+	return jsonResponse({
+		checkedAt: new Date().toISOString(),
+		results,
+	});
 }
 
 async function checkSubLink(source) {
-  const started = Date.now();
+	const started = Date.now();
 
-  try {
-    const response = await fetchTimeout(
-      source,
-      {
-        headers: {
-          "cache-control": "no-cache",
-        },
-      },
-      SOURCE_TIMEOUT,
-    );
+	try {
+		const response = await fetchTimeout(
+			source,
+			{
+				headers: {
+					'cache-control': 'no-cache',
+				},
+			},
+			SOURCE_TIMEOUT,
+		);
 
-    const result = {
-      url: source,
-      ok: response.ok,
-      status: response.status,
-      latencyMs: Date.now() - started,
-      error: null,
-    };
+		const result = {
+			url: source,
+			ok: response.ok,
+			status: response.status,
+			latencyMs: Date.now() - started,
+			error: null,
+		};
 
-    try {
-      await response.body?.cancel();
-    } catch {}
+		try {
+			await response.body?.cancel();
+		} catch {}
 
-    return result;
-  } catch (error) {
-    return {
-      url: source,
-      ok: false,
-      status: null,
-      latencyMs: Date.now() - started,
-      error: error instanceof Error ? error.message : "request failed",
-    };
-  }
+		return result;
+	} catch (error) {
+		return {
+			url: source,
+			ok: false,
+			status: null,
+			latencyMs: Date.now() - started,
+			error: error instanceof Error ? error.message : 'request failed',
+		};
+	}
 }
 
 /* -------------------------------------------------------------------------- */
 /* Cute names                                                                 */
 /* -------------------------------------------------------------------------- */
 
-const ANIMALS = ["🐱", "🦊", "🐼", "🐨", "🐸", "🐙", "🐰", "🦋", "🐹", "🐥", "🦄", "🐳"];
+const ANIMALS = ['🐱', '🦊', '🐼', '🐨', '🐸', '🐙', '🐰', '🦋', '🐹', '🐥', '🦄', '🐳'];
 
-const WORDS = ["Mochi", "Nova", "Pixel", "Cloud", "Moon", "Peach", "Jelly", "Velvet", "Mint", "Dream", "Bubble", "Cozy"];
+const WORDS = ['Mochi', 'Nova', 'Pixel', 'Cloud', 'Moon', 'Peach', 'Jelly', 'Velvet', 'Mint', 'Dream', 'Bubble', 'Cozy'];
 
-const SPARKLES = ["✨", "🌙", "☁️", "💫", "🌸", "🍀", "🫧", "⭐", "🍑", "🪐", "💜", "🌿"];
+const SPARKLES = ['✨', '🌙', '☁️', '💫', '🌸', '🍀', '🫧', '⭐', '🍑', '🪐', '💜', '🌿'];
 
 const FLAGS = {
-  ir: "🇮🇷",
-  us: "🇺🇸",
-  de: "🇩🇪",
-  nl: "🇳🇱",
-  fr: "🇫🇷",
-  gb: "🇬🇧",
-  uk: "🇬🇧",
-  fi: "🇫🇮",
-  se: "🇸🇪",
-  no: "🇳🇴",
-  dk: "🇩🇰",
-  tr: "🇹🇷",
-  ae: "🇦🇪",
-  sg: "🇸🇬",
-  jp: "🇯🇵",
-  kr: "🇰🇷",
-  ca: "🇨🇦",
-  ru: "🇷🇺",
-  ch: "🇨🇭",
-  it: "🇮🇹",
-  es: "🇪🇸",
-  au: "🇦🇺",
-  pl: "🇵🇱",
-  in: "🇮🇳",
-  hk: "🇭🇰",
-  tw: "🇹🇼",
-  br: "🇧🇷",
+	ir: '🇮🇷',
+	us: '🇺🇸',
+	de: '🇩🇪',
+	nl: '🇳🇱',
+	fr: '🇫🇷',
+	gb: '🇬🇧',
+	uk: '🇬🇧',
+	fi: '🇫🇮',
+	se: '🇸🇪',
+	no: '🇳🇴',
+	dk: '🇩🇰',
+	tr: '🇹🇷',
+	ae: '🇦🇪',
+	sg: '🇸🇬',
+	jp: '🇯🇵',
+	kr: '🇰🇷',
+	ca: '🇨🇦',
+	ru: '🇷🇺',
+	ch: '🇨🇭',
+	it: '🇮🇹',
+	es: '🇪🇸',
+	au: '🇦🇺',
+	pl: '🇵🇱',
+	in: '🇮🇳',
+	hk: '🇭🇰',
+	tw: '🇹🇼',
+	br: '🇧🇷',
 };
 
 function makeNodeName(protocol, host, path, sourceIndex) {
-  const seed = `${protocol}|${host}|${path}|${sourceIndex}`;
-  const hash = hashString(seed);
+	const seed = `${protocol}|${host}|${path}|${sourceIndex}`;
+	const hash = hashString(seed);
 
-  const flag = detectFlag(host, sourceIndex);
-  const animal = ANIMALS[hash % ANIMALS.length];
+	const flag = detectFlag(host, sourceIndex);
+	const animal = ANIMALS[hash % ANIMALS.length];
 
-  const word = WORDS[Math.floor(hash / ANIMALS.length) % WORDS.length];
+	const word = WORDS[Math.floor(hash / ANIMALS.length) % WORDS.length];
 
-  const sparkle = SPARKLES[Math.floor(hash / (ANIMALS.length * WORDS.length)) % SPARKLES.length];
+	const sparkle = SPARKLES[Math.floor(hash / (ANIMALS.length * WORDS.length)) % SPARKLES.length];
 
-  return `${flag} ${animal} ${word} ${sparkle} · ${protocol.toUpperCase()}`;
+	return `${flag} ${animal} ${word} ${sparkle} · ${protocol.toUpperCase()}`;
 }
 
 function detectFlag(host, sourceIndex = 0) {
-  const value = String(host || "").toLowerCase();
+	const value = String(host || '').toLowerCase();
 
-  const tld = value.match(/\.([a-z]{2})(?:\.|$)/)?.[1];
+	const tld = value.match(/\.([a-z]{2})(?:\.|$)/)?.[1];
 
-  if (tld && FLAGS[tld]) {
-    return FLAGS[tld];
-  }
+	if (tld && FLAGS[tld]) {
+		return FLAGS[tld];
+	}
 
-  const hints = [
-    ["iran", "🇮🇷"],
-    ["germany", "🇩🇪"],
-    ["netherlands", "🇳🇱"],
-    ["france", "🇫🇷"],
-    ["finland", "🇫🇮"],
-    ["turkey", "🇹🇷"],
-    ["singapore", "🇸🇬"],
-    ["japan", "🇯🇵"],
-    ["korea", "🇰🇷"],
-  ];
+	const hints = [
+		['iran', '🇮🇷'],
+		['germany', '🇩🇪'],
+		['netherlands', '🇳🇱'],
+		['france', '🇫🇷'],
+		['finland', '🇫🇮'],
+		['turkey', '🇹🇷'],
+		['singapore', '🇸🇬'],
+		['japan', '🇯🇵'],
+		['korea', '🇰🇷'],
+	];
 
-  for (const [key, flag] of hints) {
-    if (value.includes(key)) {
-      return flag;
-    }
-  }
+	for (const [key, flag] of hints) {
+		if (value.includes(key)) {
+			return flag;
+		}
+	}
 
-  return ["🇮🇷", "🌍", "🌐"][sourceIndex % 3];
+	return ['🇮🇷', '🌍', '🌐'][sourceIndex % 3];
 }
 
 function hashString(value) {
-  let hash = 2166136261;
+	let hash = 2166136261;
 
-  for (let i = 0; i < value.length; i++) {
-    hash ^= value.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
+	for (let i = 0; i < value.length; i++) {
+		hash ^= value.charCodeAt(i);
+		hash = Math.imul(hash, 16777619);
+	}
 
-  return hash >>> 0;
+	return hash >>> 0;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -716,61 +719,61 @@ function hashString(value) {
 /* -------------------------------------------------------------------------- */
 
 function parseVmess(line) {
-  try {
-    const encoded = line.slice("vmess://".length).trim();
+	try {
+		const encoded = line.slice('vmess://'.length).trim();
 
-    if (!encoded) return null;
+		if (!encoded) return null;
 
-    const json = atob(normalizeBase64(encoded));
-    const data = JSON.parse(json);
+		const json = atob(normalizeBase64(encoded));
+		const data = JSON.parse(json);
 
-    return {
-      id: data.id,
-      sni: data.sni || data.host || "",
-      path: data.path || "/",
-      port: Number(data.port || 443),
-      net: data.net || "",
-      tls: data.tls || "tls",
-    };
-  } catch {
-    return null;
-  }
+		return {
+			id: data.id,
+			sni: data.sni || data.host || '',
+			path: data.path || '/',
+			port: Number(data.port || 443),
+			net: data.net || '',
+			tls: data.tls || 'tls',
+		};
+	} catch {
+		return null;
+	}
 }
 
 function parseVless(line) {
-  try {
-    const parsed = new URL(line);
-    const params = parsed.searchParams;
+	try {
+		const parsed = new URL(line);
+		const params = parsed.searchParams;
 
-    return {
-      uuid: decodeURIComponent(parsed.username),
-      sni: params.get("sni") || "",
-      path: params.get("path") || "/",
-      port: Number(parsed.port || 443),
-      security: params.get("security") || "",
-      type: params.get("type") || "",
-    };
-  } catch {
-    return null;
-  }
+		return {
+			uuid: decodeURIComponent(parsed.username),
+			sni: params.get('sni') || '',
+			path: params.get('path') || '/',
+			port: Number(parsed.port || 443),
+			security: params.get('security') || '',
+			type: params.get('type') || '',
+		};
+	} catch {
+		return null;
+	}
 }
 
 function parseTrojan(line) {
-  try {
-    const parsed = new URL(line);
-    const params = parsed.searchParams;
+	try {
+		const parsed = new URL(line);
+		const params = parsed.searchParams;
 
-    return {
-      password: decodeURIComponent(parsed.username),
-      sni: params.get("sni") || "",
-      path: params.get("path") || "/",
-      port: Number(parsed.port || 443),
-      security: params.get("security") || "",
-      type: params.get("type") || "",
-    };
-  } catch {
-    return null;
-  }
+		return {
+			password: decodeURIComponent(parsed.username),
+			sni: params.get('sni') || '',
+			path: params.get('path') || '/',
+			port: Number(parsed.port || 443),
+			security: params.get('security') || '',
+			type: params.get('type') || '',
+		};
+	} catch {
+		return null;
+	}
 }
 
 /* -------------------------------------------------------------------------- */
@@ -778,133 +781,133 @@ function parseTrojan(line) {
 /* -------------------------------------------------------------------------- */
 
 async function fetchTimeout(url, init, timeout) {
-  const controller = new AbortController();
+	const controller = new AbortController();
 
-  const timer = setTimeout(() => controller.abort(), timeout);
+	const timer = setTimeout(() => controller.abort(), timeout);
 
-  try {
-    return await fetch(url, {
-      ...init,
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timer);
-  }
+	try {
+		return await fetch(url, {
+			...init,
+			signal: controller.signal,
+		});
+	} finally {
+		clearTimeout(timer);
+	}
 }
 
 function decodeBase64IfNeeded(value) {
-  const compact = value.replace(/\s+/g, "").trim();
+	const compact = value.replace(/\s+/g, '').trim();
 
-  if (!compact) {
-    return value;
-  }
+	if (!compact) {
+		return value;
+	}
 
-  if (compact.startsWith("vmess://") || compact.startsWith("vless://") || compact.startsWith("trojan://")) {
-    return value;
-  }
+	if (compact.startsWith('vmess://') || compact.startsWith('vless://') || compact.startsWith('trojan://')) {
+		return value;
+	}
 
-  try {
-    const decoded = atob(normalizeBase64(compact));
+	try {
+		const decoded = atob(normalizeBase64(compact));
 
-    if (decoded.includes("vmess://") || decoded.includes("vless://") || decoded.includes("trojan://")) {
-      return decoded;
-    }
-  } catch {}
+		if (decoded.includes('vmess://') || decoded.includes('vless://') || decoded.includes('trojan://')) {
+			return decoded;
+		}
+	} catch {}
 
-  return value;
+	return value;
 }
 
 function normalizeBase64(value) {
-  const normalized = value.replace(/-/g, "+").replace(/_/g, "/").replace(/\s/g, "");
+	const normalized = value.replace(/-/g, '+').replace(/_/g, '/').replace(/\s/g, '');
 
-  return normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+	return normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
 }
 
 function normalizePath(path) {
-  if (!path) {
-    return "/";
-  }
+	if (!path) {
+		return '/';
+	}
 
-  return path.startsWith("/") ? path : `/${path}`;
+	return path.startsWith('/') ? path : `/${path}`;
 }
 
 // extract source github account and repo + config type(last url segment) name from url: https://raw.githubusercontent.com/10ium/V2Hub3/main/Split/Normal/trojan.
 
 function extractSourceInfo(url) {
-  try {
-    const parsed = new URL(url);
+	try {
+		const parsed = new URL(url);
 
-    if (parsed.hostname !== "raw.githubusercontent.com") {
-      return null;
-    }
+		if (parsed.hostname !== 'raw.githubusercontent.com') {
+			return null;
+		}
 
-    const parts = parsed.pathname.split("/").filter(Boolean);
+		const parts = parsed.pathname.split('/').filter(Boolean);
 
-    if (parts.length < 5) {
-      return null;
-    }
+		if (parts.length < 5) {
+			return null;
+		}
 
-    const [account, repo, , , ...rest] = parts;
+		const [account, repo, , , ...rest] = parts;
 
-    const type = rest.pop() || "";
+		const type = rest.pop() || '';
 
-    return {
-      account,
-      repo,
-      type,
-    };
-  } catch {
-    return null;
-  }
+		return {
+			account,
+			repo,
+			type,
+		};
+	} catch {
+		return null;
+	}
 }
 
 function shouldSkipHost(host) {
-  const value = String(host || "").toLowerCase();
+	const value = String(host || '').toLowerCase();
 
-  return value.includes("workers.dev") || value.includes("pages.dev");
+	return value.includes('workers.dev') || value.includes('pages.dev');
 }
 
 function isIp(value) {
-  if (!value) return false;
+	if (!value) return false;
 
-  const parts = value.split(".");
+	const parts = value.split('.');
 
-  if (parts.length !== 4) {
-    return false;
-  }
+	if (parts.length !== 4) {
+		return false;
+	}
 
-  return parts.every((part) => /^\d+$/.test(part) && Number(part) >= 0 && Number(part) <= 255);
+	return parts.every((part) => /^\d+$/.test(part) && Number(part) >= 0 && Number(part) <= 255);
 }
 
 function parsePositiveInt(value) {
-  if (!value || !/^\d+$/.test(value)) {
-    return null;
-  }
+	if (!value || !/^\d+$/.test(value)) {
+		return null;
+	}
 
-  const number = Number(value);
+	const number = Number(value);
 
-  return number > 0 ? number : null;
+	return number > 0 ? number : null;
 }
 
 function randomItems(array, count) {
-  const result = [...array];
+	const result = [...array];
 
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+	for (let i = result.length - 1; i > 0; i--) {
+		const j = Math.floor(Math.random() * (i + 1));
 
-    [result[i], result[j]] = [result[j], result[i]];
-  }
+		[result[i], result[j]] = [result[j], result[i]];
+	}
 
-  return result.slice(0, count);
+	return result.slice(0, count);
 }
 
 function jsonResponse(data) {
-  return new Response(JSON.stringify(data, null, 2), {
-    headers: {
-      "content-type": "application/json; charset=UTF-8",
-      "cache-control": "no-store",
-    },
-  });
+	return new Response(JSON.stringify(data, null, 2), {
+		headers: {
+			'content-type': 'application/json; charset=UTF-8',
+			'cache-control': 'no-store',
+		},
+	});
 }
 
 /* -------------------------------------------------------------------------- */
@@ -912,10 +915,10 @@ function jsonResponse(data) {
 /* -------------------------------------------------------------------------- */
 
 function renderSubLoadingPage(rawSubPath, subscribeUrl) {
-  const safeRawSubPath = escapeHtml(rawSubPath);
-  const safeSubscribeUrl = escapeHtml(subscribeUrl);
+	const safeRawSubPath = escapeHtml(rawSubPath);
+	const safeSubscribeUrl = escapeHtml(subscribeUrl);
 
-  return `<!doctype html>
+	return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -1412,10 +1415,10 @@ loadSubscription();
 /* -------------------------------------------------------------------------- */
 
 function renderHomePage() {
-  const subscriptionUrl = `${SUBSCRIPTION_ORIGIN}/sub`;
-  const safeSubscriptionUrl = escapeHtml(subscriptionUrl);
+	const subscriptionUrl = `${SUBSCRIPTION_ORIGIN}/sub`;
+	const safeSubscriptionUrl = escapeHtml(subscriptionUrl);
 
-  return `<!doctype html>
+	return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -2184,10 +2187,10 @@ refreshSources();
 }
 
 function renderHomePageFa() {
-  const subscriptionUrl = `${SUBSCRIPTION_ORIGIN}/sub`;
-  const safeSubscriptionUrl = escapeHtml(subscriptionUrl);
+	const subscriptionUrl = `${SUBSCRIPTION_ORIGIN}/sub`;
+	const safeSubscriptionUrl = escapeHtml(subscriptionUrl);
 
-  return `<!doctype html>
+	return `<!doctype html>
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -2965,10 +2968,10 @@ refreshSources();
 /* -------------------------------------------------------------------------- */
 
 function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+	return String(value)
+		.replaceAll('&', '&amp;')
+		.replaceAll('<', '&lt;')
+		.replaceAll('>', '&gt;')
+		.replaceAll('"', '&quot;')
+		.replaceAll("'", '&#039;');
 }
