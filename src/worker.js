@@ -26,7 +26,14 @@ const HOME_ORIGIN = `https://${HOME_HOSTNAME}`;
 const SUBSCRIPTION_HOSTNAME = 'trojan.eghafari-5000.workers.dev';
 const SUBSCRIPTION_ORIGIN = `https://${SUBSCRIPTION_HOSTNAME}`;
 
-const CLEAN_IP_URL = 'https://raw.githubusercontent.com/ircfspace/cf2dns/refs/heads/master/list/ipv4.json';
+const CLEAN_IP_URL = 'https://api.hostmonit.com/get_optimization_ip';
+const CLEAN_IP_PAYLOAD = {
+	key: 'o1zrmHAF',
+	type: 'v4',
+};
+const CLEAN_IP_HEADERS = {
+	'Content-Type': 'application/json',
+};
 
 const CLEAN_IP_TIMEOUT = 5000;
 
@@ -117,9 +124,12 @@ async function getRandomCleanIp() {
 
 		try {
 			const response = await fetch(CLEAN_IP_URL, {
+				method: 'POST',
 				headers: {
+					...CLEAN_IP_HEADERS,
 					'cache-control': 'no-cache',
 				},
+				body: JSON.stringify(CLEAN_IP_PAYLOAD),
 				signal: controller.signal,
 			});
 
@@ -131,14 +141,8 @@ async function getRandomCleanIp() {
 
 			const ips = [
 				...new Set(
-					(Array.isArray(data) ? data : [])
-						.map((item) => {
-							if (typeof item === 'string') {
-								return item;
-							}
-
-							return item?.ip;
-						})
+					(Array.isArray(data?.info) ? data.info : [])
+						.map((item) => item?.ip)
 						.filter(isIp),
 				),
 			];
