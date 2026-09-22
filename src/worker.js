@@ -1,12 +1,10 @@
 // src/worker.js
 
 const subLinks = [
-	'https://raw.githubusercontent.com/iboxz/free-v2ray-collector/main/main/trojan.txt',
 	'https://raw.githubusercontent.com/10ium/V2Hub3/main/Split/Normal/trojan',
-	'https://raw.githubusercontent.com/mohamadfg-dev/telegram-v2ray-configs-collector/refs/heads/main/category/Iran.txt',
-	'https://raw.githubusercontent.com/10ium/multi-proxy-config-fetcher/refs/heads/main/configs/proxy_configs.txt',
-	'https://raw.githubusercontent.com/Epodonios/v2ray-configs/refs/heads/main/Splitted-By-Protocol/trojan.txt',
-	'https://raw.githubusercontent.com/Surfboardv2ray/TGParse/refs/heads/main/configtg.txt',
+	'https://raw.githubusercontent.com/iboxz/free-v2ray-collector/main/main/trojan.txt',
+  'https://raw.githubusercontent.com/Epodonios/v2ray-configs/refs/heads/main/Splitted-By-Protocol/trojan.txt',
+  'https://raw.githubusercontent.com/4n0nymou3/multi-proxy-config-fetcher/refs/heads/main/configs/proxy_configs_tested.txt',
 	'https://raw.githubusercontent.com/plsn1337/white-vless/refs/heads/main/filtered_vless_keys.txt',
 	'https://raw.githubusercontent.com/10ium/multi-proxy-config-fetcher/refs/heads/main/configs/proxy_configs.txt',
 	'https://raw.githubusercontent.com/MahanKenway/Freedom-V2Ray/main/configs/mix_sub.txt',
