@@ -17,6 +17,9 @@ const CONFIG_TIMEOUT = 4000;
 const CHECK_CONCURRENCY = 24;
 
 const MAX_CHECK_CANDIDATES = 40;
+const MAX_PROBE_STATUS = 499;
+const GOOD_HOST_HINTS = ['cloudfront', 'cdn', 'edge', 'server', 'traffic', 'v2ray', 'vless', 'trojan', 'proxy'];
+const BAD_HOST_HINTS = ['workers.dev', 'pages.dev', 'cf-ip', 'taobao', 'qq.com'];
 
 const HOME_HOSTNAME = 'node-garden.eindev.ir';
 const HOME_ORIGIN = `https://${HOME_HOSTNAME}`;
@@ -102,6 +105,53 @@ export default {
 
 function randomItem(array) {
 	return array[Math.floor(Math.random() * array.length)];
+}
+
+function scoreCandidate(candidate) {
+	if (!candidate) {
+		return 0;
+	}
+
+	let score = 0;
+	const host = String(candidate.sni || '').toLowerCase();
+	const path = String(candidate.path || '/');
+	const protocol = String(candidate.protocol || '').toLowerCase();
+
+	if (host && !isIp(host)) {
+		score += 12;
+	}
+	if (host && host.split('.').length >= 2) {
+		score += 6;
+	}
+	if (host && host.split('.').length >= 3) {
+		score += 3;
+	}
+	if (path.length > 0 && path.length <= 64) {
+		score += 4;
+	}
+	if (protocol === 'trojan') {
+		score += 3;
+	} else if (protocol === 'vless') {
+		score += 2;
+	}
+	if (host && !BAD_HOST_HINTS.some((hint) => host.includes(hint))) {
+		score += 5;
+	}
+	if (host && GOOD_HOST_HINTS.some((hint) => host.includes(hint))) {
+		score += 6;
+	}
+	if (host && host.startsWith('www.')) {
+		score += 2;
+	}
+	if (path && path !== '/') {
+		score += Math.min(path.length, 12) / 6;
+	}
+
+	return score;
+}
+
+function sortCandidatesByQuality(candidates) {
+	return [...candidates].sort((a, b) => scoreCandidate(b) - scoreCandidate(a));
 }
 
 async function getRandomCleanIp() {
@@ -413,17 +463,21 @@ async function handleSubscription(url, request) {
 		}
 	}
 
-	let working = candidates;
+	const uniqueCandidates = Array.from(new Map(candidates.map((candidate) => [candidate.value, candidate])).values());
+	const rankedCandidates = sortCandidatesByQuality(uniqueCandidates);
+
+	let working = rankedCandidates;
 	let checkedCount = 0;
 	let skippedForBudget = 0;
 
-	if (checkEnabled && candidates.length > 0) {
-		const toCheck = selectCandidatesForCheck(candidates, MAX_CHECK_CANDIDATES);
+	if (checkEnabled && rankedCandidates.length > 0) {
+		const toCheck = selectCandidatesForCheck(rankedCandidates, MAX_CHECK_CANDIDATES);
 
 		checkedCount = toCheck.length;
-		skippedForBudget = candidates.length - toCheck.length;
+		skippedForBudget = rankedCandidates.length - toCheck.length;
 
 		working = await filterWorking(toCheck);
+		working = sortCandidatesByQuality(working);
 	}
 
 	let result = working.map((item) => item.value);
@@ -533,38 +587,54 @@ async function checkConfig(candidate) {
 
 	try {
 		/*
-		 * Cloudflare Worker outbound WebSocket handshake.
-		 *
-		 * This confirms:
-		 *   DNS works
-		 *   TLS works
-		 *   remote server accepts WebSocket upgrade
-		 *
-		 * It does NOT authenticate VLESS/Trojan credentials.
+		 * Use two probes instead of relying on a single WS upgrade only.
+		 * Some valid endpoints accept TLS and HTTP but do not expose the exact
+		 * path as a real websocket endpoint until the client connects. We treat
+		 * a successful TLS + HTTP response as a usable signal and keep the
+		 * stricter 101 + WebSocket check as the preferred proof.
 		 */
-		const response = await fetchTimeout(
+		const wsResponse = await fetchTimeout(
 			target,
 			{
 				headers: {
 					Upgrade: 'websocket',
 					Connection: 'Upgrade',
+					'User-Agent': 'Mozilla/5.0',
 				},
 			},
 			CONFIG_TIMEOUT,
 		);
 
-		if (response.status !== 101 || !response.webSocket) {
-			return false;
+		if (wsResponse.status === 101 && wsResponse.webSocket) {
+			try {
+				wsResponse.webSocket.accept();
+				wsResponse.webSocket.close(1000, 'health-check');
+			} catch {
+				// Handshake was already successful.
+			}
+			return true;
 		}
 
-		try {
-			response.webSocket.accept();
-			response.webSocket.close(1000, 'health-check');
-		} catch {
-			// Handshake was already successful.
+		const fallbackResponse = await fetchTimeout(
+			`https://${candidate.sni}`,
+			{
+				headers: {
+					Accept: '*/*',
+					'User-Agent': 'Mozilla/5.0',
+				},
+			},
+			CONFIG_TIMEOUT,
+		);
+
+		if (
+			fallbackResponse &&
+			fallbackResponse.status >= 200 &&
+			fallbackResponse.status <= MAX_PROBE_STATUS
+		) {
+			return true;
 		}
 
-		return true;
+		return false;
 	} catch {
 		return false;
 	}
