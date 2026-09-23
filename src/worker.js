@@ -306,13 +306,17 @@ async function handleSubscription(url, request) {
 
 						if (!parsed) continue;
 
-						if (!parsed.sni || isIp(parsed.sni) || parsed.net !== 'ws' || parsed.port !== 443) {
+						const sni = normalizeHost(parsed.sni || parsed.host || parsed.add || parsed.server || '');
+
+						if (!sni || isIp(sni) || parsed.net !== 'ws' || parsed.port !== 443) {
 							continue;
 						}
 
-						if (shouldSkipHost(parsed.sni)) {
+						if (shouldSkipHost(sni)) {
 							continue;
 						}
+
+						parsed.sni = sni;
 
 						const upstreamPath = normalizePath(parsed.path);
 						const dedupeKey = `${parsed.sni}|${upstreamPath}`;
@@ -361,13 +365,17 @@ async function handleSubscription(url, request) {
 
 						if (!parsed) continue;
 
-						if (!parsed.sni || isIp(parsed.sni) || parsed.security !== 'tls' || parsed.port !== 443 || parsed.type !== 'ws') {
+						const sni = normalizeHost(parsed.sni || parsed.host || parsed.peer || parsed.servername || '');
+
+						if (!sni || isIp(sni) || parsed.port !== 443 || !['ws', ''].includes(parsed.type) || (parsed.security && parsed.security !== 'tls' && parsed.security !== '')) {
 							continue;
 						}
 
-						if (shouldSkipHost(parsed.sni)) {
+						if (shouldSkipHost(sni)) {
 							continue;
 						}
+
+						parsed.sni = sni;
 
 						const upstreamPath = normalizePath(parsed.path);
 						const dedupeKey = `${parsed.sni}|${upstreamPath}`;
@@ -413,13 +421,17 @@ async function handleSubscription(url, request) {
 
 						if (!parsed) continue;
 
-						if (!parsed.sni || isIp(parsed.sni) || parsed.security !== 'tls' || parsed.port !== 443 || parsed.type !== 'ws') {
+						const sni = normalizeHost(parsed.sni || parsed.host || parsed.peer || parsed.servername || '');
+
+						if (!sni || isIp(sni) || parsed.port !== 443 || !['ws', ''].includes(parsed.type) || (parsed.security && parsed.security !== 'tls' && parsed.security !== '')) {
 							continue;
 						}
 
-						if (shouldSkipHost(parsed.sni)) {
+						if (shouldSkipHost(sni)) {
 							continue;
 						}
+
+						parsed.sni = sni;
 
 						const upstreamPath = normalizePath(parsed.path);
 						const dedupeKey = `${parsed.sni}|${upstreamPath}`;
@@ -801,7 +813,7 @@ function parseVmess(line) {
 
 		return {
 			id: data.id,
-			sni: data.sni || data.host || '',
+			sni: normalizeHost(data.sni || data.host || data.add || data.server || ''),
 			path: data.path || '/',
 			port: Number(data.port || 443),
 			net: data.net || '',
@@ -819,7 +831,7 @@ function parseVless(line) {
 
 		return {
 			uuid: decodeURIComponent(parsed.username),
-			sni: params.get('sni') || '',
+			sni: normalizeHost(params.get('sni') || params.get('peer') || params.get('host') || params.get('servername') || ''),
 			path: params.get('path') || '/',
 			port: Number(parsed.port || 443),
 			security: params.get('security') || '',
@@ -837,7 +849,7 @@ function parseTrojan(line) {
 
 		return {
 			password: decodeURIComponent(parsed.username),
-			sni: params.get('sni') || '',
+			sni: normalizeHost(params.get('sni') || params.get('peer') || params.get('host') || params.get('servername') || ''),
 			path: params.get('path') || '/',
 			port: Number(parsed.port || 443),
 			security: params.get('security') || '',
@@ -933,10 +945,20 @@ function extractSourceInfo(url) {
 	}
 }
 
-function shouldSkipHost(host) {
-	const value = String(host || '').toLowerCase();
+function normalizeHost(value) {
+	if (!value) {
+		return '';
+	}
 
-	return value.includes('workers.dev') || value.includes('pages.dev');
+	const normalized = String(value).trim().replace(/^https?:\/\//i, '').replace(/\?.*$/, '').replace(/\/.*$/, '');
+	const withoutPort = normalized.split(':')[0];
+	return withoutPort || normalized;
+}
+
+function shouldSkipHost(host) {
+	const value = normalizeHost(host).toLowerCase();
+
+	return !value || value.includes('workers.dev') || value.includes('pages.dev') || value.includes('cloudflare.com');
 }
 
 function isIp(value) {
